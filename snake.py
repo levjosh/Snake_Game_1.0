@@ -109,7 +109,7 @@ clock = pygame.time.Clock()
 CLOCK_SPEED = 10
 
 # Initialize the snake and initial snake settings
-SNAKE_START_LEN = 2
+SNAKE_START_LEN = 8
 SNAKE_START_POS = [((SCREEN_WIDTH // 2), (SCREEN_HEIGHT // 2))]  # Start the snake in the middle of the screen
 SNAKE_START_DIR = (1, 0)
 
@@ -121,14 +121,18 @@ food_list = [Food(snake.positions, SCREEN_WIDTH // GRIDSIZE, SCREEN_HEIGHT // GR
 # Main Loop
 game_over = False
 while not game_over:
-
     # Event loop in game
     for event in pygame.event.get():
         # Option for quiting game
         if event.type == pygame.QUIT:
             game_over = True
-        # Gameplay controls
+        # Gameplay controls/mechanics
         elif event.type == pygame.KEYDOWN:
+            # This will force only 1 move per clock tick
+            if not moved_this_frame:
+                moved_this_frame = True
+            
+            # Key bindings
             if event.key == pygame.K_a and snake.direction != (1, 0):
                 snake.direction = (-1, 0)
             elif event.key == pygame.K_d and snake.direction != (-1, 0):
@@ -145,12 +149,24 @@ while not game_over:
     overlay.update_score(snake.length - SNAKE_START_LEN)
     overlay.update_clock()
 
+    # Check for collisions after updating the snake
+    if len(snake.positions) > 2 and snake.get_head_position() in snake.positions[2:]:
+        snake.reset()
+
     # Properly clear and render the screen
     for food in food_list:
+        # Convert snake head position to grid coordinates
+        head_grid_position = (
+            snake.get_head_position()[0] // GRIDSIZE,
+            snake.get_head_position()[1] // GRIDSIZE
+        )
         # Check if the snake has eaten the food
-        if snake.get_head_position() == food.position:
+        if head_grid_position == food.position:
             snake.length += 1
             food.position = food.generate_food(snake.positions)
+
+    # Reset the moved_this_frame flag at the end of the frame
+    moved_this_frame = False
 
     screen.fill((0, 0, 0))
     snake.render(screen)
