@@ -10,6 +10,20 @@ import random
 - The snake class handles collision checking, movement tracking, and snake updating
 '''
 
+# Initialize game settings
+SCREEN_WIDTH, SCREEN_HEIGHT = 500,500
+GRIDSIZE = 20
+CLOCK_SPEED = 15
+
+# Initialize the snake and initial snake settings
+SNAKE_START_LEN = 2
+SNAKE_START_POS = [(SCREEN_WIDTH // 2) - (SCREEN_WIDTH // 2 % GRIDSIZE), (SCREEN_HEIGHT // 2) - (SCREEN_HEIGHT // 2 % GRIDSIZE)]  # Start the snake in the middle of the screen
+SNAKE_START_DIR = (1, 0)
+
+# Initialize the food and food settings
+food_path = "images/apple.png"
+food_image = pygame.transform.scale(pygame.image.load(food_path), (GRIDSIZE, GRIDSIZE))
+
 
 class Overlay:
     def __init__(self):
@@ -31,7 +45,6 @@ class Overlay:
     def render(self, surface):
         score_text = self.font.render(f"Score: {self.score}", True, (255, 255, 255))
         clock_text = self.font.render(f"Time: {self.format_time()}", True, (255, 255, 255))
-
         surface.blit(score_text, (10, 10))
         surface.blit(clock_text, (10, 40))
 
@@ -44,15 +57,22 @@ class Overlay:
 
 
 class Snake:
-    def __init__(self):
+    def __init__(self, SNAKE_START_LEN, SNAKE_START_POS, SNAKE_START_DIR):
         self.length = SNAKE_START_LEN
-        self.positions = SNAKE_START_POS
+        self.positions = [SNAKE_START_POS]
         self.direction = SNAKE_START_DIR
+        self.render_initial_snake()
+        
+    def reset(self, SNAKE_START_LEN, SNAKE_START_POS, SNAKE_START_DIR):
+        self.positions = None
+        self.length = SNAKE_START_LEN
+        self.positions = [SNAKE_START_POS]   # Create a new copy of the list
+        self.direction = SNAKE_START_DIR
+        self.render_initial_snake()
 
-    def reset(self):
-        self.length = SNAKE_START_LEN
-        self.positions = SNAKE_START_POS
-        self.direction = SNAKE_START_DIR
+    def render_initial_snake(self):
+        for i in range(self.length):
+            self.update()
 
     def get_head_position(self):
         return self.positions[0]
@@ -63,11 +83,11 @@ class Snake:
         x, y = self.direction
 
         # Calculate the new head position based on head position and direction
-        new = (((cur[0] + (x*GRIDSIZE)) % SCREEN_WIDTH), (cur[1] + (y*GRIDSIZE)) % SCREEN_HEIGHT)
+        new = [((cur[0] + (x*GRIDSIZE)) % SCREEN_WIDTH), ((cur[1] + (y*GRIDSIZE)) % SCREEN_HEIGHT)]
 
         # Collision check. If the new head position is in the 'positions' list then we have collided.
         if len(self.positions) > 2 and new in self.positions[2:]:
-            self.reset()
+            self.reset(SNAKE_START_LEN, SNAKE_START_POS, SNAKE_START_DIR)
         # If not collided, the new head position is inserted into the beginning of 'positions'. Pop the last
         else:
             self.positions.insert(0, new)
@@ -79,11 +99,24 @@ class Snake:
         for p in self.positions:
             pygame.draw.rect(surface, (0, 255, 0), (p[0], p[1], GRIDSIZE, GRIDSIZE))
 
+
 class Food:
+    food_image = pygame.image.load(food_path)
     def __init__(self, snake_positions, width, height):
         self.width = width
         self.height = height
         self.position = self.generate_food(snake_positions)
+
+    def is_eaten_by(self, snake):
+        # Convert snake head position to grid coordinates
+        head_grid_position = (
+            snake.get_head_position()[0] // GRIDSIZE,
+            snake.get_head_position()[1] // GRIDSIZE
+        )
+        # Check if the snake has eaten the food
+        if head_grid_position == self.position:
+            snake.length += 1
+            self.position = self.generate_food(snake.positions)
 
     def generate_food(self, snake_positions):
         while True:
@@ -94,80 +127,56 @@ class Food:
                 return (x, y)
 
     def render(self, surface):
-        pygame.draw.rect(surface, (255, 0, 0), (self.position[0] * GRIDSIZE, self.position[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE))
+        surface.blit(food_image, (self.position[0] * GRIDSIZE, self.position[1] * GRIDSIZE))
+        # pygame.draw.rect(surface, (255, 0, 0), (self.position[0] * GRIDSIZE, self.position[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE))
 
 
 # Initialize pygame
 pygame.init()
 
-
-# Set up game window settings
-SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 1000
-GRIDSIZE = 20
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
 clock = pygame.time.Clock()
-CLOCK_SPEED = 10
-
-# Initialize the snake and initial snake settings
-SNAKE_START_LEN = 8
-SNAKE_START_POS = [((SCREEN_WIDTH // 2), (SCREEN_HEIGHT // 2))]  # Start the snake in the middle of the screen
-SNAKE_START_DIR = (1, 0)
 
 # Initialize Objects
-snake = Snake()
+snake = Snake(SNAKE_START_LEN, SNAKE_START_POS, SNAKE_START_DIR)
 overlay = Overlay()
 food_list = [Food(snake.positions, SCREEN_WIDTH // GRIDSIZE, SCREEN_HEIGHT // GRIDSIZE) for _ in range(3)]
 
 # Main Loop
-game_over = False
-while not game_over:
+close_game = False
+while not close_game:
     # Event loop in game
+    key_pressed = False
     for event in pygame.event.get():
         # Option for quiting game
         if event.type == pygame.QUIT:
-            game_over = True
+            close_game = True
         # Gameplay controls/mechanics
-        elif event.type == pygame.KEYDOWN:
-            # This will force only 1 move per clock tick
-            if not moved_this_frame:
-                moved_this_frame = True
-            
+        elif event.type == pygame.KEYDOWN and not key_pressed:            
             # Key bindings
             if event.key == pygame.K_a and snake.direction != (1, 0):
                 snake.direction = (-1, 0)
+                key_pressed = True
             elif event.key == pygame.K_d and snake.direction != (-1, 0):
                 snake.direction = (1, 0)
+                key_pressed = True
             elif event.key == pygame.K_w and snake.direction != (0, 1):
                 snake.direction = (0, -1)
+                key_pressed = True
             elif event.key == pygame.K_s and snake.direction != (0, -1):
                 snake.direction = (0, 1)
-
-        # print(f"Snake Position: {snake.positions}")
+                key_pressed = True
 
     # Update the snake and overlay
     snake.update()
     overlay.update_score(snake.length - SNAKE_START_LEN)
     overlay.update_clock()
 
-    # Check for collisions after updating the snake
-    if len(snake.positions) > 2 and snake.get_head_position() in snake.positions[2:]:
-        snake.reset()
-
-    # Properly clear and render the screen
+    # Check if the food has been eaten by the snake
     for food in food_list:
-        # Convert snake head position to grid coordinates
-        head_grid_position = (
-            snake.get_head_position()[0] // GRIDSIZE,
-            snake.get_head_position()[1] // GRIDSIZE
-        )
-        # Check if the snake has eaten the food
-        if head_grid_position == food.position:
-            snake.length += 1
-            food.position = food.generate_food(snake.positions)
+        food.is_eaten_by(snake)
 
-    # Reset the moved_this_frame flag at the end of the frame
-    moved_this_frame = False
-
+    # Refresh the screen
     screen.fill((0, 0, 0))
     snake.render(screen)
     overlay.render(screen)
@@ -177,5 +186,6 @@ while not game_over:
     # Update and tick the game
     pygame.display.update()
     clock.tick(CLOCK_SPEED)
+
 
 pygame.quit()
