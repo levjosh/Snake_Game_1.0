@@ -17,11 +17,11 @@ CLOCK_SPEED = 15
 
 # Initialize the snake and initial snake settings
 SNAKE_START_LEN = 2
-SNAKE_START_POS = [(SCREEN_WIDTH // 2) - (SCREEN_WIDTH // 2 % GRIDSIZE), (SCREEN_HEIGHT // 2) - (SCREEN_HEIGHT // 2 % GRIDSIZE)]  # Start the snake in the middle of the screen
+SNAKE_START_POS = [(SCREEN_WIDTH // 2) - (SCREEN_WIDTH // 2 % GRIDSIZE), (SCREEN_HEIGHT // 2) - (SCREEN_HEIGHT // 2 % GRIDSIZE)]  # Start the snake in the middle of the grid screen
 SNAKE_START_DIR = (1, 0)
 
 # Initialize the food and food settings
-food_path = "images/apple.png"
+food_path = "images/apple2.png"
 food_image = pygame.transform.scale(pygame.image.load(food_path), (GRIDSIZE, GRIDSIZE))
 
 
@@ -101,7 +101,6 @@ class Snake:
 
 
 class Food:
-    food_image = pygame.image.load(food_path)
     def __init__(self, snake_positions, width, height):
         self.width = width
         self.height = height
@@ -123,7 +122,7 @@ class Food:
             x = random.randrange(self.width)
             y = random.randrange(self.height)
             # Check if the new position is not on the snake
-            if (x, y) not in snake_positions:
+            if [x * GRIDSIZE, y * GRIDSIZE] not in snake_positions:
                 return (x, y)
 
     def render(self, surface):
@@ -154,16 +153,16 @@ while not close_game:
         # Gameplay controls/mechanics
         elif event.type == pygame.KEYDOWN and not key_pressed:            
             # Key bindings
-            if event.key == pygame.K_a and snake.direction != (1, 0):
+            if event.key == pygame.K_LEFT and snake.direction != (1, 0):
                 snake.direction = (-1, 0)
                 key_pressed = True
-            elif event.key == pygame.K_d and snake.direction != (-1, 0):
+            elif event.key == pygame.K_RIGHT and snake.direction != (-1, 0):
                 snake.direction = (1, 0)
                 key_pressed = True
-            elif event.key == pygame.K_w and snake.direction != (0, 1):
+            elif event.key == pygame.K_UP and snake.direction != (0, 1):
                 snake.direction = (0, -1)
                 key_pressed = True
-            elif event.key == pygame.K_s and snake.direction != (0, -1):
+            elif event.key == pygame.K_DOWN and snake.direction != (0, -1):
                 snake.direction = (0, 1)
                 key_pressed = True
 
